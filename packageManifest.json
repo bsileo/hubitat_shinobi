@@ -1,0 +1,28 @@
+{
+  "packageName": "hubitat_shinobi",
+  "author": "Brad Sileo",
+  "minimumHEVersion": "0.0",
+  "licenseFile": "https://raw.githubusercontent.com/bsileo/hubitat_shinobi/master/LICENSE",
+  "dateReleased": "2020-09-10",
+  "apps": [
+    {
+      "id": "836d47b2-4762-4892-8c5b-29dce0188926",
+      "name": "Shinobi",
+      "namespace": "bsileo",
+      "location": "https://raw.githubusercontent.com/bsileo/hubitat_shinobi/master/ShinobiApp.groovy",
+      "required": true,
+      "oauth": true,
+      "version": "0.9.1"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "1c6f080a-977a-4119-a998-c6c789c9106a",
+      "name": "Shinobi Monitor",
+      "namespace": "bsileo",
+      "location": "https://raw.githubusercontent.com/bsileo/hubitat_shinobi/master/ShinobiMonitor.groovy",
+      "required": true,
+      "version": "0.9.1"
+    }
+  ]
+}
