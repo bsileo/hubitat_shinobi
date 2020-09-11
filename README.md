@@ -29,14 +29,14 @@ An integration of the Shinobi video NVR with Hubitat home automation. The integr
 
 9. Setup Motion events from Montitors in Shinobi to Hubitat:
 
--  Open the Shinobi App in Hubitat to find the prebuilt URLs. 
--  Copy and paste these URLS into the settings for any monitor you want to connect to Hubitat.
-- Under Global detector Settings:
--- Webhook: Yes
--- Webhook URL: [pasted from Hubitat]
-- Under No Motion Detector
--- Webhook: Yes
--- Webhook URL: [pasted from Hubitat No Motion URL]
+*  Open the Shinobi App in Hubitat to find the prebuilt URLs. 
+*  Copy and paste these URLS into the settings for any monitor you want to connect to Hubitat.
+* Under Global detector Settings:
+  - Webhook: Yes
+  - Webhook URL: [pasted from Hubitat]
+* Under No Motion Detector
+  - Webhook: Yes
+  - Webhook URL: [pasted from Hubitat No Motion URL]
 
 
 
