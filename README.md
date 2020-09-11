@@ -2,6 +2,7 @@
 
 An integration of the Shinobi video NVR with Hubitat home automation. The integration allows Hubitat to see motion events from any of your Shinobi cameras and also allows Hubitat to control montor modes - Stop, Watch, and Record, trigger a motion event on a Monitor, and send PTZ controls to monitors. 
 
+![Shinobi Logo](https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png)  ![Hubitat Logo](https://cdn.shopify.com/s/files/1/2575/8806/t/20/assets/hubitat-logo-white.png)
 
 ## Installation Instructions
 1. Install and configure [Shinobi](https://shinobi.video/)          
