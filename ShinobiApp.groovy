@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.1
+ *  version: 0.9.2
  */
 
 definition(
@@ -23,27 +23,27 @@ definition(
 preferences {
     page(name: "mainPage", title: "Main")
     page(name: "installPage", title: "Install")
-    page(name: "selectMonitors", title: "Select Monitors")
+    page(name: "selectMonitors", title: "Select Monitors")    
 }
 
 def mainPage() {
     if(!state.accessToken) createAccessToken()
     def install = state.monitors != null
-    return dynamicPage(name: "home", title: "<h1>Shinobi NVR Integration</h1>", refreshInterval: 0, install: install, uninstall: true) {
+    return dynamicPage(name: "home", title: "<h1>Shinobi NVR Integration</h1>", refreshInterval: 0, install: install, uninstall: true) {        
         if (state.monitors) {
             section("<h2>Current Installation</h2>") {
                 def url = getFullLocalApiServerUrl() + "/motion" + "?access_token=" + state.accessToken + "&amp;mid={{MONITOR_ID}}&amp;region={{REGION_NAME}}"
                 def urlNo = getFullLocalApiServerUrl() + "/nomotion" + "?access_token=" + state.accessToken+ "&amp;mid={{MONITOR_ID}}"
                 paragraph "Use this local URL in the Shinobi Global Detector Settings Webhook:\n\n   <a target=\"_frame\" href=\"${url}"  + "\">${url}</a>"
                 paragraph "Use this local URL in the Shinobi No Motion Webhook:\n\n     <a target=\"_frame\" href=\"${urlNo}"  + "\">${urlNo}</a>"
-                paragraph "Both WebHooks should be configueed to use a PUT request type."
+                paragraph "Both WebHooks should be configured to use a PUT request type."
 
             }
         }
         section("<h2>Install / Setup</h2>") {
             href(name: "installPage", title: "", description: "Tap to setup the Shinobi Server and manage connected devices", required: false, page: "installPage")
         }
-        section("<h2>Logging</h2>") {
+        section("<h2>Logging</h2>") {            
              input (
                  name: "loggingLevel",
                  title: "IDE Live Logging Level:\nMessages with this level and higher will be logged to the IDE.",
@@ -102,11 +102,11 @@ def getMonitors() {
         contentType: "application/json",
         body:body
     ]
-    res = [:]
+    res = [:]    
     logger("getMonitors with ${params}","debug")
-    httpGet(params) { resp ->
+    httpGet(params) { resp ->        
         resp.data.each {
-             res[it.mid] = it
+             res[it.mid] = it   
         }
         atomicState.monitors = res
     }
@@ -133,7 +133,7 @@ def updated () {
 }
 
 
-def refresh() {
+def refresh() {     
     def devices = getMonitors()
 	devices.each {
         def child = getChild(it.key)
@@ -154,13 +154,13 @@ mappings {
   }
 }
 
-def motionHandler(request) {
+def motionHandler(request) {    
     def monitorID = params.mid
     def child = getChild(monitorID)
     child?.triggerMotion(params)
 }
 
-def noMotionHandler(request) {
+def noMotionHandler(request) {    
     def monitorID = params.mid
     def child = getChild(monitorID)
     child?.triggerNoMotion(params)
@@ -207,7 +207,7 @@ def createMonitor(monitor) {
 //*******************************************************
 
 private logger(msg, level = "debug") {
-
+	    
     def lookup = [
         	    "None" : 0,
         	    "Error" : 1,
@@ -216,7 +216,7 @@ private logger(msg, level = "debug") {
         	    "Debug" : 4,
         	    "Trace" : 5]
       def logLevel = lookup[settings.loggingLevel ? settings.loggingLevel : 'Debug']
-     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevelIDE}")
+     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevelIDE}")  	
 
     switch(level) {
         case "error":

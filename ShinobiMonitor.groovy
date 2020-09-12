@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.1
+ *  version: 0.9.2
  */
 metadata {
 	definition (name: "Shinobi Monitor", namespace: "bsileo", author: "Brad Sileo")
@@ -24,6 +24,7 @@ metadata {
         command "zoomOut"
         command "enableNV"
         command "disableNV"
+        
         command "trigger", [
             [name: "region", type: "STRING", description: "The name of the region. Example : door"],
             [name: "reason", type: "STRING", description: "The reason for this trigger. Example : motion"],
@@ -43,7 +44,7 @@ metadata {
             [name:"value",
                      type: "NUMBER",
                      description: "The amount of time to stay in Watch mode before stopping",
-                ]
+                ]            
             ]
         command "stop"
         command "record", [
@@ -60,7 +61,7 @@ metadata {
             [name:"value",
                      type: "NUMBER",
                      description: "The amount of time to Record for",
-                ]
+                ]            
         ]
 	}
 
@@ -68,13 +69,18 @@ metadata {
          section("General:") {
               input ( name: "motionTimeout",
         	    title: "Timeout until motion is considered stopped, measured in seconds",
-        	    type: "number",
+        	    type: "number",        	
         	    defaultValue: "30"
                 )
              input ( name: "enableMotionTimeout",
         	    title: "Enable automatic motion timeout",
-        	    type: "bool",
+        	    type: "bool",  	
         	    defaultValue: true
+                )
+             input ( name: "hasPTZ",
+        	    title: "Does this camera have PTZ capabilities?",
+        	    type: "bool",  	
+        	    defaultValue: false
                 )
             input (
         	name: "loggingLevel",
@@ -94,15 +100,18 @@ metadata {
             )
         }
     }
+    
 }
 
 def installed() {
     state.loggingLevel = (settings.loggingLevel) ? settings.loggingLevel : 'Info'
     getHubPlatform()
+    state.hasPTZ = settings.hasPTZ
 }
 
 def updated() {
     state.loggingLevel = (settings.loggingLevel) ? settings.loggingLevel : 'Info'
+    state.hasPTZ = settings.hasPTZ
 }
 
 def refresh() {
@@ -137,13 +146,15 @@ def triggerMotion(event) {
 }
 
 def triggerNoMotion(event) {
-    logger("Trigger NO Motion - ${event}","debug")
+    logger("Trigger NO Motion - ${event}","debug")  
     sendEvent([[name: "motion", value: "inactive"]])
+    sendEvent([[name: "motionRegion", value: ""]])
 }
 
 def noMotion() {
     logger("Auto NO Motion","info")
     sendEvent([[name: "motion", value: "inactive"]])
+    sendEvent([[name: "motionRegion", value: ""]])
 }
 
 def timeInterval(time, unit) {
@@ -152,15 +163,15 @@ def timeInterval(time, unit) {
 }
 
 def on() {
-     record()
+     record()   
 }
 
 def off() {
-     stop()
+     stop()   
 }
 
-def record(units="no timer", time=null) {
-    sendMonitorCommand("record",units, time) { resp ->
+def record(units="no timer", time=null) {   
+    sendMonitorCommand("record",units, time) { resp ->        
         logger("Record result->${resp.data}","info")
         refresh()
     }
@@ -181,19 +192,19 @@ def start(units="no timer", time=null) {
 }
 
 def center() {
-     sendControlCommand("center")
+     sendControlCommand("center")   
 }
 
 def up() {
-     sendControlCommand("up")
+     sendControlCommand("up")   
 }
 
 def down() {
-     sendControlCommand("down")
+     sendControlCommand("down")   
 }
 
 def left() {
-     sendControlCommand("left")
+     sendControlCommand("left")  
 }
 
 def right() {
@@ -203,15 +214,15 @@ def right() {
 }
 
 def zoomIn() {
-     sendControlCommand("zoom_in")
+     sendControlCommand("zoom_in")  
 }
 
 def zoomOut() {
-     sendControlCommand("zoom_out")
+     sendControlCommand("zoom_out")  
 }
 
 def enableNV() {
-     sendControlCommand("enable_nv")
+     sendControlCommand("enable_nv")  
 }
 
 def disableNV() {
@@ -255,18 +266,18 @@ private sendCommand(type, command=null, units="no timer", time=null, query=null,
     }
     if (query) {
         path = path + "?${query}"
-    }
-
+    }   
+    
     def params = [
-        uri: controller.uri,
+        uri: controller.uri,  
         path: path,
         requestContentType: "application/json",
         contentType: "application/json",
         body:body
-    ]
+    ]     
     logger("Run command with ${params}","debug")
     logger("URL = ${params.uri}${params.path}","debug")
-    httpGet(params) { resp ->
+    httpGet(params) { resp ->        
         logger("SMC result->${resp.data}","debug")
         closure(resp)
     }
@@ -281,7 +292,7 @@ private sendCommand(type, command=null, units="no timer", time=null, query=null,
 //*******************************************************
 
 private logger(msg, level = "debug") {
-
+	    
     def lookup = [
         	    "None" : 0,
         	    "Error" : 1,
@@ -290,7 +301,7 @@ private logger(msg, level = "debug") {
         	    "Debug" : 4,
         	    "Trace" : 5]
       def logLevel = lookup[state.loggingLevel ? state.loggingLevel : 'Debug']
-     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevel}")
+     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevel}")  	
 
     switch(level) {
         case "error":
