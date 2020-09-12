@@ -18,19 +18,19 @@ The basic installation will create a motion sensor for each Monitor in Shinobi. 
 
 ## Setup and Use
 
-1. Open Apps and click "Add USer App"
+1. Within Shinobi, create a new API key. This is under the main Menu-->API and click Add. This key needs at least "Can Get Monitors" and "Can Control Monitors" access to use all the features in this integration.
 
-2. Select the Shinobi App from the list
+2. Open Apps and click "Add User App"
 
-3. Under the Install/Setup section click "Tap to Setup..."
+3. Select the Shinobi App from the list
 
-4. Within Shinobi, create a new API key. This is under the main Menu-->API and click add. This key needs at least "Can Get Monitors" and "Can Control Monitors" access to use all the features in this integration.
+4. Under the Install/Setup Section click "Tap to Setup..."
 
 5. Get the group key for your user in Shinobi. This is in the main menu-->Settings under the Account Info section.
 
 6. Enter the Group key and API Key in the correct locations in Hubitat
 
-7. Click Next
+7. Click Next...
 
 8. Select the monitors (cameras) to install into Hubitat. A new device will be created for each.
 
