@@ -4,6 +4,10 @@ An integration of the Shinobi video NVR with Hubitat home automation. The integr
 
 ![Shinobi Logo](https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png)  ![Hubitat Logo](https://cdn.shopify.com/s/files/1/2575/8806/t/20/assets/hubitat-logo-white.png)
 
+# What can I do with this integration?
+
+The API of Shinobi is connected to Hubitat so that all motion detection activity in any Shinobi Monitor can be used as a motion detector in Hubitat. other data, such as tyhe reegion for a motion detection event, is also available as a custom event in Hubitat and could be consumed in the the Rule Machine or other Apps to drive behavior. We also provide access to the MOnitor APIs in Shinobi so that a motion event can be trigger on a camera from data in Hubitat, which may automatically start recording, for example. A camera can also be trigger to start watching or recording for a time interval or indiefinitely. Finally for cameras that support PTZ behavior via Shinobi, these API endpoints are exposed as commands in Hubitat so they can be called from other Apps, rules, etc. 
+
 ## Installation Instructions
 1. Install and configure [Shinobi](https://shinobi.video/)          
 
