@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.2
+ *  version: 0.9.4
  */
 metadata {
 	definition (name: "Shinobi Monitor", namespace: "bsileo", author: "Brad Sileo")
@@ -24,11 +24,14 @@ metadata {
         command "zoomOut"
         command "enableNV"
         command "disableNV"
-        
+
         command "trigger", [
             [name: "region", type: "STRING", description: "The name of the region. Example : door"],
             [name: "reason", type: "STRING", description: "The reason for this trigger. Example : motion"],
             [name: "confidence", type: "NUMBER", description: "A number to signify how much confidence this engine has that there is motion. Example : 197.4755859375"],
+            ]
+        command "addRegionChild", [
+            [name: "name*", type: "STRING", description: "The name of the region. Example : door"],
             ]
         command "start", [
             [name:"units*",
@@ -44,7 +47,7 @@ metadata {
             [name:"value",
                      type: "NUMBER",
                      description: "The amount of time to stay in Watch mode before stopping",
-                ]            
+                ]
             ]
         command "stop"
         command "record", [
@@ -61,7 +64,7 @@ metadata {
             [name:"value",
                      type: "NUMBER",
                      description: "The amount of time to Record for",
-                ]            
+                ]
         ]
 	}
 
@@ -69,17 +72,17 @@ metadata {
          section("General:") {
               input ( name: "motionTimeout",
         	    title: "Timeout until motion is considered stopped, measured in seconds",
-        	    type: "number",        	
+        	    type: "number",
         	    defaultValue: "30"
                 )
              input ( name: "enableMotionTimeout",
         	    title: "Enable automatic motion timeout",
-        	    type: "bool",  	
+        	    type: "bool",
         	    defaultValue: true
                 )
              input ( name: "hasPTZ",
         	    title: "Does this camera have PTZ capabilities?",
-        	    type: "bool",  	
+        	    type: "bool",
         	    defaultValue: false
                 )
             input (
@@ -100,7 +103,7 @@ metadata {
             )
         }
     }
-    
+
 }
 
 def installed() {
@@ -134,7 +137,12 @@ def triggerMotion(event) {
     logger("Trigger Motion - ${event}","debug")
     def desc = "Motion detected"
     if (event.region) {
-        sendEvent([[name: "motionRegion", value: event.region]])
+        def RC = regionChild(event.region)
+        if (RC) {
+            RC.sendEvent(name: "motion", value: "active", descriptionText: "Region motion detected in parent")
+        } else {
+            sendEvent([[name: "motionRegion", value: event.region]])
+        }
         desc = desc + " in ${event.region}"
     }
     sendEvent(name: "motion", value: "active", descriptionText: desc)
@@ -146,15 +154,47 @@ def triggerMotion(event) {
 }
 
 def triggerNoMotion(event) {
-    logger("Trigger NO Motion - ${event}","debug")  
+    logger("Trigger NO Motion - ${event}","debug")
+    sendNoMotion()
+}
+
+def sendNoMotion() {
     sendEvent([[name: "motion", value: "inactive"]])
-    sendEvent([[name: "motionRegion", value: ""]])
+    def child = false
+    getChildDevices().each {
+        it.sendEvent(name: "motion", value: "inactive", descriptionText: "Region motion cleared in parent")
+        child = true
+    }
+    if (!child) {
+        sendEvent([[name: "motionRegion", value: ""]])
+    }
 }
 
 def noMotion() {
     logger("Auto NO Motion","info")
-    sendEvent([[name: "motion", value: "inactive"]])
-    sendEvent([[name: "motionRegion", value: ""]])
+    sendNoMotion()
+}
+
+
+def regionChild(region) {
+    return getChildDevice(regionChildName(region))
+}
+
+def regionChildName(region) {
+     return device.deviceNetworkId + "-" + region
+}
+
+def addRegionChild(name) {
+    if (regionChild(name)) {
+        logger("The region device called '${name}' already exists", "warn")
+    } else {
+        d = addChildDevice("hubitat", "Generic Component Motion Sensor", regionChildName(name), [
+            "label": "Shinobi Region Monitor ${name}",
+            "completedSetup" : true,
+            isComponent: true
+		])
+        logger("The region device called '${name}' was created", "info")
+    }
 }
 
 def timeInterval(time, unit) {
@@ -163,15 +203,15 @@ def timeInterval(time, unit) {
 }
 
 def on() {
-     record()   
+     record()
 }
 
 def off() {
-     stop()   
+     stop()
 }
 
-def record(units="no timer", time=null) {   
-    sendMonitorCommand("record",units, time) { resp ->        
+def record(units="no timer", time=null) {
+    sendMonitorCommand("record",units, time) { resp ->
         logger("Record result->${resp.data}","info")
         refresh()
     }
@@ -192,19 +232,19 @@ def start(units="no timer", time=null) {
 }
 
 def center() {
-     sendControlCommand("center")   
+     sendControlCommand("center")
 }
 
 def up() {
-     sendControlCommand("up")   
+     sendControlCommand("up")
 }
 
 def down() {
-     sendControlCommand("down")   
+     sendControlCommand("down")
 }
 
 def left() {
-     sendControlCommand("left")  
+     sendControlCommand("left")
 }
 
 def right() {
@@ -214,15 +254,15 @@ def right() {
 }
 
 def zoomIn() {
-     sendControlCommand("zoom_in")  
+     sendControlCommand("zoom_in")
 }
 
 def zoomOut() {
-     sendControlCommand("zoom_out")  
+     sendControlCommand("zoom_out")
 }
 
 def enableNV() {
-     sendControlCommand("enable_nv")  
+     sendControlCommand("enable_nv")
 }
 
 def disableNV() {
@@ -266,18 +306,18 @@ private sendCommand(type, command=null, units="no timer", time=null, query=null,
     }
     if (query) {
         path = path + "?${query}"
-    }   
-    
+    }
+
     def params = [
-        uri: controller.uri,  
+        uri: controller.uri,
         path: path,
         requestContentType: "application/json",
         contentType: "application/json",
         body:body
-    ]     
+    ]
     logger("Run command with ${params}","debug")
     logger("URL = ${params.uri}${params.path}","debug")
-    httpGet(params) { resp ->        
+    httpGet(params) { resp ->
         logger("SMC result->${resp.data}","debug")
         closure(resp)
     }
@@ -292,7 +332,7 @@ private sendCommand(type, command=null, units="no timer", time=null, query=null,
 //*******************************************************
 
 private logger(msg, level = "debug") {
-	    
+
     def lookup = [
         	    "None" : 0,
         	    "Error" : 1,
@@ -301,7 +341,7 @@ private logger(msg, level = "debug") {
         	    "Debug" : 4,
         	    "Trace" : 5]
       def logLevel = lookup[state.loggingLevel ? state.loggingLevel : 'Debug']
-     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevel}")  	
+     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevel}")
 
     switch(level) {
         case "error":

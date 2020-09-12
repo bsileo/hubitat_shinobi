@@ -22,7 +22,7 @@
       "namespace": "bsileo",
       "location": "https://raw.githubusercontent.com/bsileo/hubitat_shinobi/master/ShinobiMonitor.groovy",
       "required": true,
-      "version": "0.9.2"
+      "version": "0.9.4"
     }
   ]
 }
