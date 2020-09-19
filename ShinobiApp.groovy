@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.2
+ *  version: 0.9.4
  */
 
 definition(
@@ -14,25 +14,23 @@ definition(
 	namespace: "bsileo",
 	author: "Brad Sileo",
 	description: "Connect your Shinobi NVR to Hubitat",
-	category: "SmartThings Labs",
-	iconUrl:   "https://raw.githubusercontent.com/brbeaird/SmartThings_RainMachine/master/icons/rainmachine.1x.png",
-	iconX2Url: "https://raw.githubusercontent.com/brbeaird/SmartThings_RainMachine/master/icons/rainmachine.2x.png",
-	iconX3Url: "https://raw.githubusercontent.com/brbeaird/SmartThings_RainMachine/master/icons/rainmachine.3x.png"
+	iconUrl:   "",
+	iconX2Url: ""
 )
 
 preferences {
     page(name: "mainPage", title: "Main")
     page(name: "installPage", title: "Install")
-    page(name: "selectMonitors", title: "Select Monitors")    
+    page(name: "selectMonitors", title: "Select Monitors")
 }
 
 def mainPage() {
     if(!state.accessToken) createAccessToken()
     def install = state.monitors != null
-    return dynamicPage(name: "home", title: "<h1>Shinobi NVR Integration</h1>", refreshInterval: 0, install: install, uninstall: true) {        
+    return dynamicPage(name: "home", title: "<h1>Shinobi NVR Integration</h1>", refreshInterval: 0, install: install, uninstall: true) {
         if (state.monitors) {
             section("<h2>Current Installation</h2>") {
-                def url = getFullLocalApiServerUrl() + "/motion" + "?access_token=" + state.accessToken + "&amp;mid={{MONITOR_ID}}&amp;region={{REGION_NAME}}"
+                def url = getFullLocalApiServerUrl() + "/motion" + "?access_token=" + state.accessToken + "&amp;mid={{MONITOR_ID}}&amp;region={{REGION_NAME}}&amp;confidence={{CONFIDENCE}}&amp;name={{MONITOR_NAME}}&amp;reason={{REASON}}"
                 def urlNo = getFullLocalApiServerUrl() + "/nomotion" + "?access_token=" + state.accessToken+ "&amp;mid={{MONITOR_ID}}"
                 paragraph "Use this local URL in the Shinobi Global Detector Settings Webhook:\n\n   <a target=\"_frame\" href=\"${url}"  + "\">${url}</a>"
                 paragraph "Use this local URL in the Shinobi No Motion Webhook:\n\n     <a target=\"_frame\" href=\"${urlNo}"  + "\">${urlNo}</a>"
@@ -43,10 +41,10 @@ def mainPage() {
         section("<h2>Install / Setup</h2>") {
             href(name: "installPage", title: "", description: "Tap to setup the Shinobi Server and manage connected devices", required: false, page: "installPage")
         }
-        section("<h2>Logging</h2>") {            
+        section("<h2>Logging</h2>") {
              input (
                  name: "loggingLevel",
-                 title: "IDE Live Logging Level:\nMessages with this level and higher will be logged to the IDE.",
+                 title: "Live Logging Level:\nMessages with this level and higher will be logged to the IDE.",
                  type: "enum",
                  options: [
                      "None",
@@ -102,11 +100,11 @@ def getMonitors() {
         contentType: "application/json",
         body:body
     ]
-    res = [:]    
+    res = [:]
     logger("getMonitors with ${params}","debug")
-    httpGet(params) { resp ->        
+    httpGet(params) { resp ->
         resp.data.each {
-             res[it.mid] = it   
+             res[it.mid] = it
         }
         atomicState.monitors = res
     }
@@ -132,8 +130,18 @@ def updated () {
     updateChildren()
 }
 
+def uninstalled() {
+     removeChildren()
+}
 
-def refresh() {     
+def removeChildren() {
+    getChildDevices().each {
+        deleteChildDevice(it.deviceNetworkID)
+    }
+}
+
+
+def refresh() {
     def devices = getMonitors()
 	devices.each {
         def child = getChild(it.key)
@@ -154,13 +162,13 @@ mappings {
   }
 }
 
-def motionHandler(request) {    
+def motionHandler(request) {
     def monitorID = params.mid
     def child = getChild(monitorID)
     child?.triggerMotion(params)
 }
 
-def noMotionHandler(request) {    
+def noMotionHandler(request) {
     def monitorID = params.mid
     def child = getChild(monitorID)
     child?.triggerNoMotion(params)
@@ -174,25 +182,36 @@ def getChild(monitorID) {
 
 def updateChildren() {
     settings.selectedMonitors.each {
-        def monitor = atomicState.monitors[it]
-        logger("MON=${monitor.streams}","debug")
         def child = getChild(it)
         if (child) {
-            logger("Update Child.....","debug")
+            logger("Update Child ${it}","debug")
         }
         else {
+            def monitor = atomicState.monitors[it]
+            logger("Create new Monitor called ${monitor.mid}","info")
             createMonitor(monitor)
+        }
+    }
+    getChildDevices().each {
+        def selected = false
+        settings.selectedMonitors.each { sMon ->
+            if (sMon == it.deviceNetworkId) {
+                selected = true
+            }
+        }
+        if (! selected) {
+            logger("Remove unselected monitor with ID ${it.deviceNetworkId}","warn")
+            deleteChildDevice(it.deviceNetworkId)
         }
     }
 }
 
 def createMonitor(monitor) {
-    logger("Create Monitor for ${monitor}","debug")
+    logger("Create Monitor for ${monitor}","trace")
     def hub = location.hubs[0]
     d = addChildDevice("bsileo", "Shinobi Monitor", monitor.mid, hub.id, [
         "label": "Shinobi Monitor ${monitor.name}",
         "completedSetup" : true,
-        isComponent: true,
 		"data": [
 				]
 		])
@@ -207,7 +226,7 @@ def createMonitor(monitor) {
 //*******************************************************
 
 private logger(msg, level = "debug") {
-	    
+
     def lookup = [
         	    "None" : 0,
         	    "Error" : 1,
@@ -215,8 +234,7 @@ private logger(msg, level = "debug") {
         	    "Info" : 3,
         	    "Debug" : 4,
         	    "Trace" : 5]
-      def logLevel = lookup[settings.loggingLevel ? settings.loggingLevel : 'Debug']
-     // log.debug("Lookup is now ${logLevel} for ${state.loggingLevelIDE}")  	
+      def logLevel = lookup[settings.loggingLevel ? settings.loggingLevel : 'Debug']     
 
     switch(level) {
         case "error":
