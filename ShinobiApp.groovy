@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.4
+ *  version: 0.9.6
  */
 
 definition(
@@ -213,6 +213,7 @@ def createMonitor(monitor) {
         "label": "Shinobi Monitor ${monitor.name}",
         "completedSetup" : true,
 		"data": [
+            name: monitor.name
 				]
 		])
 }

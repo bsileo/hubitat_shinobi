@@ -6,7 +6,7 @@
  *  Author: Brad Sileo
  *
  *
- *  version: 0.9.4
+ *  version: 0.9.6
  */
 metadata {
 	definition (name: "Shinobi Monitor", namespace: "bsileo", author: "Brad Sileo")
@@ -14,6 +14,7 @@ metadata {
 	    capability "Switch"
         capability "MotionSensor"
         capability "Refresh"
+        capability "Configuration"
         attribute "mode", "string"
         attribute "status", "string"
         command"up"
@@ -31,7 +32,7 @@ metadata {
             [name: "confidence", type: "NUMBER", description: "A number to signify how much confidence this engine has that there is motion. Example : 197.4755859375"],
             ]
         command "addRegionChild", [
-            [name: "name*", type: "STRING", description: "The name of the region. Example : door"],
+            [name: "name*", type: "STRING", description: "Manually add a region child. Use this instead of the Automatic mode with Configure if needed. The name of the region is required and must match the name in Shinobi. Example : door"],
             ]
         command "start", [
             [name:"units*",
@@ -71,23 +72,32 @@ metadata {
     preferences {
          section("General:") {
               input ( name: "motionTimeout",
-        	    title: "Timeout until motion is considered stopped, measured in seconds",
+        	    title: "<h3>Timeout for auto motion stop</h3>",
+                description: "The amount of time, in seconds until motion is considered stopped. You can use this instead of the NoMotion detector in Shinobi",
         	    type: "number",
         	    defaultValue: "30"
                 )
              input ( name: "enableMotionTimeout",
-        	    title: "Enable automatic motion timeout",
+        	    title: "<h3>Enable automatic motion timeout</h3>",
+                description: "Should we automatically inactivate motion on this device and all regions after Motion Timeout",
         	    type: "bool",
         	    defaultValue: true
                 )
+             input ( name: "enableAutoRegionCreation",
+        	    title: "<h3>Enable automatic region creation</h3>",
+                description: "If set to true, new regions will automatically be created from the Monitor data. After setting this to True and <strong>saving preferences</strong>, press Configure to update and process the new region children.",
+        	    type: "bool",
+        	    defaultValue: false
+                )
              input ( name: "hasPTZ",
-        	    title: "Does this camera have PTZ capabilities?",
+        	    title: "<h3>Does this camera have PTZ capabilities?</h3>",
         	    type: "bool",
         	    defaultValue: false
                 )
             input (
         	name: "loggingLevel",
-        	title: "IDE Live Logging Level:\nMessages with this level and higher will be logged to the IDE.",
+        	title: "<h3>IDE Live Logging Level</h3>",
+            description: "Messages with this level and higher will be logged to the IDE. All others are ignored",
         	type: "enum",
         	options: [
         	    "None",
@@ -116,6 +126,40 @@ def updated() {
     state.loggingLevel = (settings.loggingLevel) ? settings.loggingLevel : 'Info'
     state.hasPTZ = settings.hasPTZ
 }
+
+def configure() {
+    sendMonitorCommand() { resp ->
+        parseConfigure(resp.data)
+    }
+}
+
+def parseConfigure(monitor) {
+    logger("Doing Configure run with ${monitor}","trace")       
+    logger("Doing Configure run with ${monitor.details}","trace")       
+    monitor.details.eachWithIndex() { it,index ->
+        logger("Details ${index}==${it}","trace")
+        def details = new groovy.json.JsonSlurper().parseText(it)
+        logger("Detail ${details}","trace")
+        details.each { it2 ->     
+            def key = it2.key
+            if (key == "cords") { 
+                def regions = new groovy.json.JsonSlurper().parseText(it2.value)
+                logger("A Detail ${regions}","trace")                
+                autoAddRegionChildren(regions)
+            }
+        }
+    }  
+}
+
+def autoAddRegionChildren(regions) {  
+  if (settings.enableAutoRegionCreation) {
+      regions.each() {
+          logger("Auto creating new child for region ${it.value.name}","debug")
+          addRegionChild(it.value.name)
+      }
+  }   
+}
+
 
 def refresh() {
     sendMonitorCommand() { resp ->
@@ -147,7 +191,7 @@ def triggerMotion(event) {
     }
     sendEvent(name: "motion", value: "active", descriptionText: desc)
     if (settings.enableMotionTimeout) {
-        logger("Schedule noMotion for ${settings.motionTimeout} seconds","info")
+        logger("Schedule no Motion for ${settings.motionTimeout} seconds","info")
         unschedule()
         runIn(settings.motionTimeout, noMotion)
     }
@@ -177,23 +221,27 @@ def noMotion() {
 
 
 def regionChild(region) {
-    return getChildDevice(regionChildName(region))
+    def kid = getChildDevice(regionChildName(region))
+    return kid
 }
 
 def regionChildName(region) {
      return device.deviceNetworkId + "-" + region
 }
 
+
+
+
 def addRegionChild(name) {
     if (regionChild(name)) {
         logger("The region device called '${name}' already exists", "warn")
     } else {
-        d = addChildDevice("hubitat", "Generic Component Motion Sensor", regionChildName(name), [
-            "label": "Shinobi Region Monitor ${name}",
-            "completedSetup" : true,
-            isComponent: true
+        def d = addChildDevice("hubitat", "Generic Component Motion Sensor", regionChildName(name), [
+            "label": "Shinobi Region ${getDataValue("name")}/${name}",
+            "completedSetup" : true
 		])
         logger("The region device called '${name}' was created", "info")
+        return d
     }
 }
 
@@ -296,7 +344,7 @@ def sendMotionCommand(plug, region, reason, confidence, closure) {
 
 
 private sendCommand(type, command=null, units="no timer", time=null, query=null, closure) {
-    logger("Start SMC of ${type} with ${units} for ${time} - ${command}","debug")
+    logger("Start SendCommand of ${type} with ${units} for ${time} - ${command}","debug")
     def controller = getParent().getControllerParams()
     def body = ""
     def path = "/${controller.APIKey}/${type}/${controller.groupKey}/${device.deviceNetworkId}"
@@ -318,7 +366,7 @@ private sendCommand(type, command=null, units="no timer", time=null, query=null,
     logger("Run command with ${params}","debug")
     logger("URL = ${params.uri}${params.path}","debug")
     httpGet(params) { resp ->
-        logger("SMC result->${resp.data}","debug")
+        logger("SMC result->${resp.data}","trace")
         closure(resp)
     }
 }
